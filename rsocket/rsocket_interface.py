@@ -4,6 +4,7 @@ from typing import Union, Optional, Any
 from reactivestreams.publisher import Publisher
 from rsocket.frame import Frame, RequestFrame
 from rsocket.payload import Payload
+from rsocket.transports.transport import Transport
 
 
 class RSocketInterface(metaclass=abc.ABCMeta):
@@ -45,4 +46,13 @@ class RSocketInterface(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def send_error(self, stream_id: int, exception: Exception):
+        ...
+
+    @property
+    @abc.abstractmethod
+    def resume_token(self) -> Optional[str]:
+        ...
+
+    @abc.abstractmethod
+    def set_transport(self, transport: Transport) -> 'RSocketInterface':
         ...

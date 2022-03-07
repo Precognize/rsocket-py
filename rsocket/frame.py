@@ -220,8 +220,7 @@ class SetupFrame(Frame):
         if self.flags_resume:
             self.token_length = struct.unpack_from('>H', buffer, offset)[0]
             offset += 2
-            self.resume_identification_token = (
-                buffer[offset:offset + self.token_length])
+            self.resume_identification_token = buffer[offset:offset + self.token_length]
             offset += self.token_length
 
         def unpack_string():

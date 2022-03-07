@@ -9,7 +9,7 @@ from reactivestreams.subscriber import DefaultSubscriber
 from rsocket.datetime_helpers import to_milliseconds
 from rsocket.error_codes import ErrorCode
 from rsocket.exceptions import RSocketProtocolException
-from rsocket.extensions.mimetypes import WellKnownMimeTypes
+from rsocket.extensions.mimetypes import WellKnownMimeTypes, ensure_encoding_name
 from rsocket.frame import KeepAliveFrame, \
     MetadataPushFrame, RequestFireAndForgetFrame, RequestResponseFrame, \
     RequestStreamFrame, Frame, exception_to_error_frame, LeaseFrame, ErrorFrame, RequestFrame, \
@@ -18,7 +18,6 @@ from rsocket.frame import RequestChannelFrame, ResumeFrame, is_fragmentable_fram
 from rsocket.frame import SetupFrame
 from rsocket.frame_builders import to_payload_frame, to_fire_and_forget_frame
 from rsocket.frame_fragment_cache import FrameFragmentCache
-from rsocket.frame_helpers import ensure_bytes
 from rsocket.frame_logger import log_frame
 from rsocket.handlers.request_cahnnel_responder import RequestChannelResponder
 from rsocket.handlers.request_channel_requester import RequestChannelRequester
@@ -74,9 +73,9 @@ class RSocket(RSocketInterface):
         self._max_lifetime_period = max_lifetime_period
         self._keep_alive_period = keep_alive_period
         self._setup_payload = setup_payload
-
-        self._data_encoding = self._ensure_encoding_name(data_encoding)
-        self._metadata_encoding = self._ensure_encoding_name(metadata_encoding)
+        self._resume_token: Optional[bytes] = None
+        self._data_encoding = ensure_encoding_name(data_encoding)
+        self._metadata_encoding = ensure_encoding_name(metadata_encoding)
         self._is_closing = False
 
         if self._honor_lease:
@@ -108,6 +107,10 @@ class RSocket(RSocketInterface):
             ErrorFrame: self.handle_error
         }
 
+    def set_transport(self, transport: Transport) -> 'RSocket':
+        self._transport = transport
+        return self
+
     def connect(self):
         logger().debug('%s: sending setup frame', self._log_identifier())
 
@@ -120,11 +123,9 @@ class RSocket(RSocketInterface):
 
         return self
 
-    def _ensure_encoding_name(self, encoding) -> bytes:
-        if isinstance(encoding, WellKnownMimeTypes):
-            return encoding.value.name
-
-        return ensure_bytes(encoding)
+    @property
+    def resume_token(self) -> Optional[str]:
+        return self._resume_token
 
     def _start_task_if_not_closing(self, task_factory: Callable[[], Coroutine]) -> Optional[Task]:
         if not self._is_closing:
@@ -227,9 +228,12 @@ class RSocket(RSocketInterface):
         self._register_stream(stream_id, request_responder)
         request_responder.frame_received(frame)
 
+    def _resume_available(self) -> bool:
+        return self._resume_token is not None
+
     async def handle_setup(self, frame: SetupFrame):
         if frame.flags_resume:
-            raise RSocketProtocolException(ErrorCode.UNSUPPORTED_SETUP, data='Resume not supported')
+            self._resume_token = frame.resume_identification_token
 
         if frame.flags_lease:
             if self._lease_publisher is None:

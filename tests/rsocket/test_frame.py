@@ -85,10 +85,10 @@ async def test_setup_readable(connection, metadata_flag, metadata, lease, data):
 
 
 @pytest.mark.parametrize('lease', (
-        (0),
-        (1)
+        0,
+        1
 ))
-async def test_setup_with_resume(connection, lease):
+async def test_setup_with_resume_and_optional_lease(connection, lease):
     data = build_frame(
         bits(24, 84, 'Frame size'),
         bits(1, 0, 'Padding'),
@@ -451,10 +451,14 @@ async def test_resume_frame(connection):
 
     frames = await asyncstdlib.builtins.list(connection.receive_data(data))
     frame = frames[0]
+
     assert isinstance(frame, ResumeFrame)
     assert frame.last_server_position == 123
     assert frame.first_client_position == 456
     assert frame.frame_type is FrameType.RESUME
+    assert frame.token_length == 12
+    assert frame.resume_identification_token == b'resume_token'
+
     assert serialize_with_frame_size_header(frame) == data
 
 
