@@ -3,7 +3,6 @@ from typing import Optional
 
 from expiring_dict import ExpiringDict
 
-from rsocket.rsocket_interface import RSocketInterface
 from rsocket.rsocket_server import RSocketServer
 from rsocket.transports.transport import Transport
 
@@ -21,10 +20,10 @@ class ServerRegistry:
         self._server_by_resume_token = ExpiringDict(
             self._server_expiration_ttl.total_seconds())
 
-    def register_server(self, server: RSocketInterface):
+    def register_server(self, server: RSocketServer):
         self._server_by_resume_token[server.resume_token] = server
 
-    def get_or_create_server(self, transport: Transport, resume_token: Optional[str] = None) -> RSocketInterface:
+    def get_or_create_server(self, transport: Transport, resume_token: Optional[str] = None) -> RSocketServer:
         existing_server = self._server_by_resume_token.get(resume_token)
 
         if existing_server is not None:
@@ -32,5 +31,5 @@ class ServerRegistry:
 
         return self._new_server(transport)
 
-    def _new_server(self, transport: Transport) -> RSocketInterface:
+    def _new_server(self, transport: Transport) -> RSocketServer:
         return RSocketServer(transport, handler_factory=self._handler_factory)

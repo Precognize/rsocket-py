@@ -80,6 +80,7 @@ class RSocketBase(RSocket, RSocketInternal):
         self._requester_lease = None
         self._is_closing = False
         self._connecting = True
+        self.resume_token: Optional[str] = None
 
         self._async_frame_handler_by_type: Dict[Type[Frame], Any] = {
             RequestResponseFrame: self.handle_request_response,
@@ -241,7 +242,7 @@ class RSocketBase(RSocket, RSocketInternal):
 
     async def handle_setup(self, frame: SetupFrame):
         if frame.flags_resume:
-            raise RSocketProtocolError(ErrorCode.UNSUPPORTED_SETUP, data='Resume not supported')
+            self.resume_token = frame.resume_identification_token
 
         if frame.flags_lease:
             if self._lease_publisher is None:

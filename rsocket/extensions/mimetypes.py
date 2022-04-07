@@ -4,7 +4,6 @@ from typing import Optional
 from rsocket.exceptions import RSocketUnknownMimetype
 from rsocket.frame_helpers import ensure_bytes
 from rsocket.helpers import WellKnownType
-from rsocket.frame_helpers import ensure_bytes
 
 
 class WellKnownMimeType(WellKnownType):
