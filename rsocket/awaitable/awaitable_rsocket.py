@@ -8,8 +8,15 @@ from rsocket.rsocket import RSocket
 
 
 class AwaitableRSocket:
+
     def __init__(self, rsocket: RSocket):
         self._rsocket = rsocket
+
+    def fire_and_forget(self, payload: Payload):
+        self._rsocket.fire_and_forget(payload)
+
+    def metadata_push(self, metadata: bytes):
+        self._rsocket.metadata_push(metadata)
 
     async def request_response(self, payload: Payload) -> Payload:
         return await self._rsocket.request_response(payload)
@@ -32,3 +39,16 @@ class AwaitableRSocket:
         self._rsocket.request_channel(payload, publisher).initial_request_n(initial_request_n).subscribe(subscriber)
 
         return await subscriber.run()
+
+    async def __aenter__(self):
+        await self._rsocket.__aenter__()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self._rsocket.__aexit__(exc_type, exc_val, exc_tb)
+
+    async def connect(self):
+        return await self._rsocket.connect()
+
+    def close(self):
+        self._rsocket.close()

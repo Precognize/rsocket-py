@@ -41,11 +41,11 @@ class RxRSocket:
     def metadata_push(self, metadata: bytes):
         self._rsocket.metadata_push(metadata)
 
-    def connect(self):
-        return self._rsocket.connect()
+    async def connect(self):
+        return await self._rsocket.connect()
 
-    def close(self):
-        self._rsocket.close()
+    async def close(self):
+        await self._rsocket.close()
 
     async def __aenter__(self):
         await self._rsocket.__aenter__()

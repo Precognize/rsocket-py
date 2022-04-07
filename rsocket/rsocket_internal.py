@@ -1,25 +1,11 @@
 import abc
-from typing import Union, Optional, Any
 
-from reactivestreams.publisher import Publisher
+from rsocket.error_codes import ErrorCode
 from rsocket.frame import Frame, RequestFrame
 from rsocket.payload import Payload
-from rsocket.transports.transport import Transport
 
 
-class RSocketInterface(metaclass=abc.ABCMeta):
-
-    @abc.abstractmethod
-    def connect(self):
-        ...
-
-    @abc.abstractmethod
-    def request_channel(
-            self,
-            payload: Payload,
-            local_publisher: Optional[Publisher] = None) -> Union[Any, Publisher]:
-        ...
-
+class RSocketInternal(metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def send_frame(self, frame: Frame):
         ...
@@ -30,10 +16,6 @@ class RSocketInterface(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def finish_stream(self, stream_id: int):
-        ...
-
-    @abc.abstractmethod
-    def _log_identifier(self) -> str:
         ...
 
     @abc.abstractmethod
@@ -48,11 +30,6 @@ class RSocketInterface(metaclass=abc.ABCMeta):
     def send_error(self, stream_id: int, exception: Exception):
         ...
 
-    @property
     @abc.abstractmethod
-    def resume_token(self) -> Optional[str]:
-        ...
-
-    @abc.abstractmethod
-    def set_transport(self, transport: Transport) -> 'RSocketInterface':
+    def stop_all_streams(self, error_code=ErrorCode.CANCELED, data=b''):
         ...

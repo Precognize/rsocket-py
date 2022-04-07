@@ -2,13 +2,13 @@ import asyncio
 from abc import ABCMeta, abstractmethod
 from asyncio import Future
 from datetime import timedelta
-from typing import Tuple, Optional, Callable
+from typing import Tuple, Optional
 
 from reactivestreams.publisher import Publisher
 from reactivestreams.subscriber import Subscriber
 from rsocket.error_codes import ErrorCode
 from rsocket.extensions.composite_metadata import CompositeMetadata
-from rsocket.helpers import create_future, create_error_future
+from rsocket.helpers import create_error_future
 from rsocket.logger import logger
 from rsocket.payload import Payload
 
@@ -58,9 +58,14 @@ class RequestHandler(metaclass=ABCMeta):
     @abstractmethod
     async def on_keepalive_timeout(self,
                                    time_since_last_keepalive: timedelta,
-                                   cancel_all_streams: Callable):
+                                   rsocket):
         ...
 
+    @abstractmethod
+    async def on_connection_lost(self, rsocket, exception):
+        ...
+
+    # noinspection PyMethodMayBeStatic
     def _parse_composite_metadata(self, metadata: bytes) -> CompositeMetadata:
         composite_metadata = CompositeMetadata()
         composite_metadata.parse(metadata)
@@ -91,9 +96,12 @@ class BaseRequestHandler(RequestHandler):
         raise RuntimeError('Not implemented')
 
     async def on_error(self, error_code: ErrorCode, payload: Payload):
-        logger().error('Error: %s, %s', error_code, payload)
+        logger().error('Error handler: %s, %s', error_code, payload)
+
+    async def on_connection_lost(self, rsocket, exception: Exception):
+        await rsocket.close()
 
     async def on_keepalive_timeout(self,
                                    time_since_last_keepalive: timedelta,
-                                   cancel_all_streams: Callable):
+                                   rsocket):
         pass

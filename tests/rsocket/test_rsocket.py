@@ -1,15 +1,17 @@
 import asyncio
 import logging
 from datetime import timedelta
-from typing import Callable
+from typing import Union
 
 import pytest
 
 from rsocket.error_codes import ErrorCode
-from rsocket.exceptions import RSocketProtocolException
+from rsocket.exceptions import RSocketProtocolError
 from rsocket.helpers import create_future
 from rsocket.payload import Payload
 from rsocket.request_handler import BaseRequestHandler
+from rsocket.rsocket import RSocket
+from rsocket.rsocket_internal import RSocketInternal
 
 
 async def test_rsocket_client_closed_without_requests(lazy_pipe):
@@ -46,8 +48,8 @@ async def test_rsocket_max_server_keepalive_reached_and_request_canceled_explici
 
         async def on_keepalive_timeout(self,
                                        time_since_last_keepalive: timedelta,
-                                       cancel_all_streams: Callable):
-            cancel_all_streams()
+                                       socket: Union[RSocketInternal, RSocket]):
+            socket.stop_all_streams(data=b'Server not alive')
 
     async with lazy_pipe(
             client_arguments={
@@ -55,7 +57,7 @@ async def test_rsocket_max_server_keepalive_reached_and_request_canceled_explici
                 'max_lifetime_period': timedelta(seconds=1),
                 'handler_factory': ClientHandler},
             server_arguments={'handler_factory': Handler}) as (server, client):
-        with pytest.raises(RSocketProtocolException) as exc_info:
+        with pytest.raises(RSocketProtocolError) as exc_info:
             await client.request_response(Payload(b'dog', b'cat'))
 
         assert exc_info.value.data == 'Server not alive'
@@ -72,13 +74,13 @@ async def test_rsocket_keepalive(pipe, caplog):
     found_server_received_keepalive = False
 
     for record in caplog.records:
-        if record.message == 'client: Sent keepalive':
+        if record.message == 'client: Sent frame (type=KEEPALIVE, stream_id=0)':
             found_client_sent_keepalive = True
-        if record.message == 'server: Received keepalive':
+        if record.message == 'server: Received frame (type=KEEPALIVE, stream_id=0)':
             found_server_received_keepalive = True
-        if record.message == 'server: Responded to keepalive':
+        if record.message == 'server: Sent frame (type=KEEPALIVE, stream_id=0)':
             found_server_sent_keepalive = True
-        if record.message == 'client: Received keepalive':
+        if record.message == 'client: Received frame (type=KEEPALIVE, stream_id=0)':
             found_client_received_keepalive = True
 
         assert record.levelname not in ("CRITICAL", "ERROR", "WARNING")

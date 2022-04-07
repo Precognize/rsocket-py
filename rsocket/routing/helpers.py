@@ -1,30 +1,17 @@
-from rsocket.extensions.authentication import AuthenticationBearer, AuthenticationSimple
-from rsocket.extensions.authentication_content import AuthenticationContent
-from rsocket.extensions.composite_metadata import CompositeMetadata, CompositeMetadataItem
-from rsocket.extensions.routing import RoutingMetadata
+from rsocket.extensions.helpers import (composite, route, authenticate_bearer,
+                                        authenticate_simple, data_mime_type, data_mime_types,
+                                        require_route)
 
+import warnings
+warnings.warn("use rsocket.extensions.helpers instead", DeprecationWarning,
+              stacklevel=2)
 
-def composite(*items) -> bytes:
-    metadata = CompositeMetadata()
-    metadata.extend(*items)
-    return metadata.serialize()
-
-
-def authenticate_simple(username: str, password: str) -> CompositeMetadataItem:
-    return AuthenticationContent(AuthenticationSimple(username, password))
-
-
-def authenticate_bearer(token: str) -> CompositeMetadataItem:
-    return AuthenticationContent(AuthenticationBearer(token))
-
-
-def route(path: str) -> CompositeMetadataItem:
-    return RoutingMetadata([path])
-
-
-def require_route(composite_metadata: CompositeMetadata) -> str:
-    for item in composite_metadata.items:
-        if isinstance(item, RoutingMetadata):
-            return item.tags[0].decode()
-
-    raise Exception('No route found in request')
+__all__ = [
+    'composite',
+    'route',
+    'authenticate_simple',
+    'authenticate_bearer',
+    'data_mime_types',
+    'data_mime_type',
+    'require_route'
+]

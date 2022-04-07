@@ -13,7 +13,7 @@ from rsocket.extensions.mimetypes import WellKnownMimeTypes
 from rsocket.helpers import create_future
 from rsocket.payload import Payload
 from rsocket.request_handler import BaseRequestHandler
-from rsocket.routing.helpers import composite, authenticate_simple, authenticate_bearer
+from rsocket.extensions.helpers import composite, authenticate_simple, authenticate_bearer
 from tests.rsocket.helpers import bits, data_bits, build_frame
 
 
@@ -93,7 +93,7 @@ async def test_authentication_success_on_setup(lazy_pipe):
         assert result.data == b'response'
 
 
-@pytest.mark.allow_error_log
+@pytest.mark.allow_error_log(regex_filter='(Protocol|Setup) error')
 async def test_authentication_failure_on_setup(lazy_pipe):
     received_error_event = Event()
     received_error: Optional[tuple] = None
