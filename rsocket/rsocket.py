@@ -3,6 +3,7 @@ from asyncio import Future
 from typing import Union, Optional, Any
 
 from reactivestreams.publisher import Publisher
+from rsocket.extensions.extension_item import ExtensionItem
 from rsocket.payload import Payload
 from rsocket.streams.backpressureapi import BackpressureApi
 
@@ -30,6 +31,10 @@ class RSocket(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def metadata_push(self, metadata: bytes):
+        ...
+
+    @abc.abstractmethod
+    def extension_push(self, item: ExtensionItem):
         ...
 
     @abc.abstractmethod

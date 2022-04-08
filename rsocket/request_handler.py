@@ -62,7 +62,11 @@ class RequestHandler(metaclass=ABCMeta):
         ...
 
     @abstractmethod
-    async def on_connection_lost(self, rsocket, exception):
+    async def on_extension(self, extension_type: int, data: bytes):
+        ...
+
+    @abstractmethod
+    async def on_connection_lost(self, rsocket, exception: Exception):
         ...
 
     # noinspection PyMethodMayBeStatic
@@ -104,4 +108,7 @@ class BaseRequestHandler(RequestHandler):
     async def on_keepalive_timeout(self,
                                    time_since_last_keepalive: timedelta,
                                    rsocket):
+        pass
+
+    async def on_extension(self, extension_type, data):
         pass

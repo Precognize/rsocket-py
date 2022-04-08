@@ -4,10 +4,13 @@ from asyncio import Future, Task
 from datetime import timedelta
 from typing import Union, Optional, Dict, Any, Coroutine, Callable, Type, cast, TypeVar
 
+from hyperframe.frame import ExtensionFrame
+
 from reactivestreams.publisher import Publisher
 from reactivestreams.subscriber import DefaultSubscriber
 from rsocket.error_codes import ErrorCode
 from rsocket.exceptions import RSocketProtocolError, RSocketTransportError
+from rsocket.extensions.extension_item import ExtensionItem
 from rsocket.extensions.mimetypes import WellKnownMimeTypes, ensure_encoding_name
 from rsocket.frame import (KeepAliveFrame,
                            MetadataPushFrame, RequestFireAndForgetFrame,
@@ -20,7 +23,7 @@ from rsocket.frame import (RequestChannelFrame, ResumeFrame,
                            is_fragmentable_frame, CONNECTION_STREAM_ID)
 from rsocket.frame import SetupFrame
 from rsocket.frame_builders import to_payload_frame, to_fire_and_forget_frame, to_setup_frame, to_metadata_push_frame, \
-    to_keepalive_frame
+    to_keepalive_frame, to_extension_frame
 from rsocket.frame_fragment_cache import FrameFragmentCache
 from rsocket.frame_logger import log_frame
 from rsocket.handlers.request_cahnnel_responder import RequestChannelResponder
@@ -91,7 +94,8 @@ class RSocketBase(RSocket, RSocketInternal):
             ResumeFrame: self.handle_resume,
             LeaseFrame: self.handle_lease,
             KeepAliveFrame: self.handle_keep_alive,
-            ErrorFrame: self.handle_error
+            ErrorFrame: self.handle_error,
+            ExtensionFrame: self.handle_extension,
         }
 
         self._setup_internals()
@@ -203,6 +207,9 @@ class RSocketBase(RSocket, RSocketInternal):
 
     async def handle_error(self, frame: ErrorFrame):
         await self._handler.on_error(frame.error_code, payload_from_frame(frame))
+
+    async def handle_extension(self, frame: ExtensionFrame):
+        await self._handler.on_extension(frame)
 
     async def handle_keep_alive(self, frame: KeepAliveFrame):
         self._update_last_keepalive()
@@ -468,6 +475,11 @@ class RSocketBase(RSocket, RSocketInternal):
         logger().debug('%s: metadata-push: %s', self._log_identifier(), metadata)
 
         self.send_frame(to_metadata_push_frame(metadata))
+
+    def extension_push(self, item: ExtensionItem):
+        logger().debug('%s: extension-push: %s', self._log_identifier(), item)
+
+        self.send_frame(to_extension_frame(item))
 
     def _is_frame_allowed_to_send(self, frame: Frame) -> bool:
         if isinstance(frame, initiate_request_frame_types):

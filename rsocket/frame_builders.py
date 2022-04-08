@@ -1,11 +1,12 @@
 from rsocket.datetime_helpers import to_milliseconds
+from rsocket.extensions.extension_item import ExtensionItem
 from rsocket.fragment import Fragment
 from rsocket.frame import (PayloadFrame, RequestNFrame,
                            CancelFrame, RequestChannelFrame,
                            RequestStreamFrame, RequestResponseFrame,
                            RequestFireAndForgetFrame, SetupFrame,
                            MetadataPushFrame, KeepAliveFrame,
-                           MAX_REQUEST_N)
+                           MAX_REQUEST_N, ExtendedFrame)
 from rsocket.payload import Payload
 
 
@@ -27,14 +28,14 @@ def to_payload_frame(stream_id: int,
     return frame
 
 
-def to_request_n_frame(stream_id: int, n: int = MAX_REQUEST_N):
+def to_request_n_frame(stream_id: int, n: int = MAX_REQUEST_N) -> RequestNFrame:
     frame = RequestNFrame()
     frame.stream_id = stream_id
     frame.request_n = n
     return frame
 
 
-def to_cancel_frame(stream_id: int):
+def to_cancel_frame(stream_id: int) -> CancelFrame:
     frame = CancelFrame()
     frame.stream_id = stream_id
     return frame
@@ -42,7 +43,7 @@ def to_cancel_frame(stream_id: int):
 
 def to_request_channel_frame(stream_id: int, payload: Payload,
                              initial_request_n: int = MAX_REQUEST_N,
-                             complete: bool = False):
+                             complete: bool = False) -> RequestChannelFrame:
     request = RequestChannelFrame()
     request.initial_request_n = initial_request_n
     request.stream_id = stream_id
@@ -52,7 +53,9 @@ def to_request_channel_frame(stream_id: int, payload: Payload,
     return request
 
 
-def to_request_stream_frame(stream_id: int, payload: Payload, initial_request_n: int = MAX_REQUEST_N):
+def to_request_stream_frame(stream_id: int,
+                            payload: Payload,
+                            initial_request_n: int = MAX_REQUEST_N) -> RequestStreamFrame:
     request = RequestStreamFrame()
     request.initial_request_n = initial_request_n
     request.stream_id = stream_id
@@ -61,7 +64,7 @@ def to_request_stream_frame(stream_id: int, payload: Payload, initial_request_n:
     return request
 
 
-def to_request_response_frame(stream_id: int, payload: Payload):
+def to_request_response_frame(stream_id: int, payload: Payload) -> RequestResponseFrame:
     request = RequestResponseFrame()
     request.stream_id = stream_id
     request.data = payload.data
@@ -69,7 +72,7 @@ def to_request_response_frame(stream_id: int, payload: Payload):
     return request
 
 
-def to_fire_and_forget_frame(stream_id: int, payload: Payload):
+def to_fire_and_forget_frame(stream_id: int, payload: Payload) -> RequestFireAndForgetFrame:
     frame = RequestFireAndForgetFrame()
     frame.stream_id = stream_id
     frame.data = payload.data
@@ -82,7 +85,7 @@ def to_setup_frame(payload,
                    metadata_encoding,
                    keep_alive_period,
                    max_lifetime_period,
-                   honor_lease=False):
+                   honor_lease=False) -> SetupFrame:
     setup = SetupFrame()
     setup.flags_lease = honor_lease
     setup.keep_alive_milliseconds = to_milliseconds(keep_alive_period)
@@ -95,9 +98,22 @@ def to_setup_frame(payload,
     return setup
 
 
-def to_metadata_push_frame(metadata: bytes):
+def to_metadata_push_frame(metadata: bytes) -> MetadataPushFrame:
     frame = MetadataPushFrame()
     frame.metadata = metadata
+    return frame
+
+
+def to_extension_frame(item: ExtensionItem) -> ExtendedFrame:
+    frame = ExtendedFrame()
+
+    frame.flags_ignore = item.ignore
+    frame.data = item.data
+
+    if item.metadata is not None and len(item.metadata) > 0:
+        frame.flags_metadata = True
+        frame.metadata = item.metadata
+
     return frame
 
 

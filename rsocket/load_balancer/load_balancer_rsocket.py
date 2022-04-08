@@ -2,6 +2,7 @@ from asyncio import Future
 from typing import Union, Optional, Any
 
 from reactivestreams.publisher import Publisher
+from rsocket.extensions.extension_item import ExtensionItem
 from rsocket.load_balancer.load_balancer_strategy import LoadBalancerStrategy
 from rsocket.payload import Payload
 from rsocket.rsocket import RSocket
@@ -29,6 +30,9 @@ class LoadBalancerRSocket(RSocket):
 
     def metadata_push(self, metadata: bytes):
         self._select_client().metadata_push(metadata)
+
+    def extension_push(self, item: ExtensionItem):
+        self._select_client().extension_push(item)
 
     async def connect(self):
         await self._strategy.connect()

@@ -1,3 +1,5 @@
+from typing import cast
+
 import asyncstdlib
 import pytest
 
@@ -6,11 +8,12 @@ from rsocket.exceptions import RSocketProtocolError
 from rsocket.extensions.authentication_types import WellKnownAuthenticationTypes
 from rsocket.extensions.composite_metadata import CompositeMetadata
 from rsocket.extensions.mimetypes import WellKnownMimeTypes
+from rsocket.extensions.tagging import TaggingMetadata
 from rsocket.frame import (SetupFrame, CancelFrame, ErrorFrame, FrameType,
                            RequestResponseFrame, RequestNFrame, ResumeFrame,
                            MetadataPushFrame, PayloadFrame, LeaseFrame, ResumeOKFrame, KeepAliveFrame,
                            serialize_with_frame_size_header, RequestStreamFrame, RequestChannelFrame, ParseError,
-                           parse_or_ignore)
+                           parse_or_ignore, ExtendedFrame)
 from tests.rsocket.helpers import data_bits, build_frame, bits
 
 
@@ -87,8 +90,8 @@ async def test_setup_readable(frame_parser, metadata_flag, metadata, lease, data
 
 
 @pytest.mark.parametrize('lease', (
-        (0),
-        (1)
+        0,
+        1
 ))
 async def test_setup_with_resume(frame_parser, lease):
     data = build_frame(
@@ -189,8 +192,9 @@ async def test_request_stream_frame(frame_parser, follows):
     composite_metadata = CompositeMetadata()
     composite_metadata.parse(frame.metadata)
 
-    assert composite_metadata.items[0].encoding == b'message/x.rsocket.routing.v0'
-    assert composite_metadata.items[0].tags == [b'target.path']
+    composite_item = cast(TaggingMetadata, composite_metadata.items[0])
+    assert composite_item.encoding == b'message/x.rsocket.routing.v0'
+    assert composite_item.tags == [b'target.path']
 
     assert composite_metadata.serialize() == frame.metadata
 
@@ -242,8 +246,9 @@ async def test_request_channel_frame(frame_parser, follows, complete):
     composite_metadata = CompositeMetadata()
     composite_metadata.parse(frame.metadata)
 
-    assert composite_metadata.items[0].encoding == b'message/x.rsocket.routing.v0'
-    assert composite_metadata.items[0].tags == [b'target.path']
+    composite_item = cast(TaggingMetadata, composite_metadata.items[0])
+    assert composite_item.encoding == b'message/x.rsocket.routing.v0'
+    assert composite_item.tags == [b'target.path']
 
     assert composite_metadata.serialize() == frame.metadata
 
@@ -304,8 +309,9 @@ async def test_request_with_composite_metadata(frame_parser):
     composite_metadata = CompositeMetadata()
     composite_metadata.parse(frame.metadata)
 
-    assert composite_metadata.items[0].encoding == b'message/x.rsocket.routing.v0'
-    assert composite_metadata.items[0].tags == [b'target.path']
+    composite_item = cast(TaggingMetadata, composite_metadata.items[0])
+    assert composite_item.encoding == b'message/x.rsocket.routing.v0'
+    assert composite_item.tags == [b'target.path']
 
     assert composite_metadata.serialize() == frame.metadata
 
@@ -345,8 +351,9 @@ async def test_composite_metadata_multiple_items():
     composite_metadata = CompositeMetadata()
     composite_metadata.parse(data)
 
-    assert composite_metadata.items[0].encoding == b'message/x.rsocket.routing.v0'
-    assert composite_metadata.items[0].tags == [b'target.path']
+    composite_item = cast(TaggingMetadata, composite_metadata.items[0])
+    assert composite_item.encoding == b'message/x.rsocket.routing.v0'
+    assert composite_item.tags == [b'target.path']
 
     assert composite_metadata.items[1].encoding == b'message/x.rsocket.mime-type.v0'
     assert composite_metadata.items[1].data_encoding == b'text/css'
@@ -580,6 +587,31 @@ async def test_keepalive_frame(frame_parser):
     assert frame.data == b'additional data'
     assert serialize_with_frame_size_header(frame) == data
 
+
+async def test_extension_frame(frame_parser):
+    data = build_frame(
+        bits(24, 25, 'Frame size'),
+        bits(1, 0, 'Padding'),
+        bits(31, 0, 'Stream id'),
+        bits(6, FrameType.EXTENSION, 'Frame type'),
+        # Flags
+        bits(1, 0, 'Ignore'),
+        bits(1, 0, 'Metadata'),
+        bits(8, 0, 'Padding flags'),
+        bits(1, 0, 'Padding'),
+        bits(31, 6, 'Extended type'),
+        data_bits(b'additional data')
+    )
+
+    frames = await asyncstdlib.builtins.list(frame_parser.receive_data(data))
+    frame = frames[0]
+
+    assert isinstance(frame, ExtendedFrame)
+    assert frame.stream_id == 0
+    assert frame.extended_type == 6
+    assert frame.frame_type is FrameType.EXTENSION
+    assert frame.data == b'additional data'
+    assert serialize_with_frame_size_header(frame) == data
 
 def test_parse_error_on_frame_too_short():
     with pytest.raises(ParseError):

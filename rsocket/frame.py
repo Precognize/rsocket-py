@@ -42,7 +42,7 @@ class FrameType(IntEnum):
     METADATA_PUSH = 12
     RESUME = 13
     RESUME_OK = 14
-    EXT = 0xFFFF
+    EXTENSION = 0x3F
 
 
 HEADER_LENGTH = 6  # A full header is 4 (stream) + 2 (type, flags) bytes.
@@ -128,6 +128,7 @@ class Frame(Header, metaclass=ABCMeta):
 
     def serialize(self, middle=b'', flags: int = 0) -> bytes:
         flags &= ~(_FLAG_IGNORE_BIT | _FLAG_METADATA_BIT)
+
         if self.flags_ignore:
             flags |= _FLAG_IGNORE_BIT
         if self.metadata:
@@ -573,15 +574,28 @@ class ResumeOKFrame(Frame):
 
 class ExtendedFrame(Frame, metaclass=abc.ABCMeta):
     __slots__ = (
-        'extended_type'
+        'extended_type',
+        'data'
     )
 
     def __init__(self):
-        super().__init__(FrameType.EXT)
+        super().__init__(FrameType.EXTENSION)
+        self.extended_type = None
 
-    @abc.abstractmethod
+    def parse(self, buffer: bytes, offset: int):
+        parse_header(self, buffer, offset)
+        offset += HEADER_LENGTH
+        extended_type = struct.unpack_from('>I', buffer, offset)[0]
+        offset += 4
+        self.extended_type = extended_type & MASK_31_BITS
+
+        offset += self.parse_metadata(buffer, offset)
+        offset += self.parse_data(buffer, offset)
+
     def serialize(self, middle=b'', flags: int = 0) -> bytes:
-        ...
+        serialized = struct.pack('>I', self.extended_type & MASK_31_BITS)
+
+        return super().serialize(serialized)
 
 
 _frame_class_by_id = {
@@ -599,6 +613,7 @@ _frame_class_by_id = {
     FrameType.METADATA_PUSH: MetadataPushFrame,
     FrameType.RESUME: ResumeFrame,
     FrameType.RESUME_OK: ResumeOKFrame,
+    FrameType.EXTENSION: ExtendedFrame
 }
 
 
