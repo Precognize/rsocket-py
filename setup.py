@@ -1,15 +1,22 @@
+import os
+
 from setuptools import setup, find_packages
 
 with open('README.md') as fd:
     long_description = fd.read()
 
+
+def get_version():
+    return os.environ.get('PACKAGE_VERSION', '1.0.0')
+
+
 setup(
-    name='rsocket',
-    version='0.3.dev3',
+    name='precognize-rsocket',
+    version=get_version(),
     description='Python RSocket library',
     long_description=long_description,
     long_description_content_type='text/markdown',
-    url='https://github.com/rsocket/rsocket-py',
+    url='https://github.com/Precognize/rsocket-py',
     author='Gabriel Shaar',
     author_email='gabis@precog.co',
     license='MIT',
