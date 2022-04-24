@@ -4,7 +4,7 @@ Python implementation of [RSocket](http://rsocket.io)
 
 # Installation
 
-The [pypi](https://pypi.org/project/rsocket/) stable package (version 0.2) is very old (and barely implements anything).
+The [pypi](https://pypi.org/project/rsocket/) stable package (version 0.2) is very old.
 
 Currently, the pre-release package can be installed using:
 
@@ -12,7 +12,18 @@ Currently, the pre-release package can be installed using:
 pip install --pre rsocket
 ```
 
-or download the source code, build a package:
+or install any of the extras:
+  * rx
+  * aiohttp
+  * quart
+  * uic
+
+Example:
+```shell
+pip install --pre rsocket[rx]
+```
+
+Alternatively, download the source code, build a package:
 
 ```shell
 python3 setup.py bdist_wheel
@@ -44,6 +55,8 @@ all the examples
 | server_quic.py              |               | client_quic.py                     |                 |
 | server_with_lease.py        |               |                                    | ClientWithLease |
 | server_with_routing.py      |               | client_with_routing.py             | Client          |
+| server_with_routing.py      |               | client_rx.py                       |                 |
+| server_with_routing.py      |               | client_reconnect.py                |                 |
 |                             | Server        | run_against_example_java_server.py |                 |
 | server_quart_websocket.py   |               | client_websocket.py                |                 |
 | server_aiohttp_websocket.py |               | client_websocket.py                |                 |
