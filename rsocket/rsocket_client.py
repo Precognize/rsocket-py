@@ -96,6 +96,7 @@ class RSocketClient(RSocketBase):
     async def _close(self, reconnect=False):
         if not reconnect:
             await cancel_if_task_exists(self._reconnect_task)
+            self._reconnect_task = None
         else:
             logger().debug('%s: Closing before reconnect', self._log_identifier())
 
@@ -146,6 +147,7 @@ class RSocketClient(RSocketBase):
 
     async def _finally_sender(self):
         await cancel_if_task_exists(self._keepalive_task)
+        self._keepalive_task = None
 
     def _update_last_keepalive(self):
         self._last_server_keepalive = datetime.now()
